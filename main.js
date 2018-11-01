@@ -1,5 +1,5 @@
 var cellSize = 50;
-var resolution = [10, 10];
+var resolution = 2;
 var svgNamespace = "http://www.w3.org/2000/svg";
 var cells = [];
 var labels = [];
@@ -13,6 +13,7 @@ var guessBox = null;
 var root = null;
 var margin = [20, 40];
 var expression = null;
+var swapButton = null;
 var gameOverRoot = null;
 
 function onReady() {
@@ -22,12 +23,12 @@ function onReady() {
   root = document.getElementById('root');
   guessBox = document.getElementById('guessBox');
 
-  cellSize = root.offsetWidth / resolution[0];
-  svg.setAttribute('viewBox', '0 0 ' + (cellSize * resolution[0] + margin[0]) + ' ' + (cellSize * resolution[1] + margin[1]));
+  cellSize = root.offsetWidth / resolution;
+  svg.setAttribute('viewBox', '0 0 ' + (cellSize * resolution + margin[0]) + ' ' + (cellSize * resolution + margin[1]));
 
   guessBox.style.width = (cellSize * 0.4) + 'px';
 
-  for (var r = 0; r < resolution[1]; ++r) {
+  for (var r = 0; r < resolution; ++r) {
     var label = document.createElementNS(svgNamespace, 'text');
     label.setAttribute('x', 0);
     label.setAttribute('y', (r + 0.5) * cellSize + margin[1]);
@@ -38,7 +39,7 @@ function onReady() {
     svg.appendChild(label);
   }
 
-  for (var c = 0; c < resolution[0]; ++c) {
+  for (var c = 0; c < resolution; ++c) {
     var label = document.createElementNS(svgNamespace, 'text');
     label.setAttribute('x', (c + 0.5) * cellSize + margin[0]);
     label.setAttribute('y', 15);
@@ -50,8 +51,8 @@ function onReady() {
   }
 
   var padding = 5;
-  for (var r = 0; r < resolution[1]; ++r) {
-    for (var c = 0; c < resolution[0]; ++c) {
+  for (var r = 0; r < resolution; ++r) {
+    for (var c = 0; c < resolution; ++c) {
       var cell = document.createElementNS(svgNamespace, 'rect');
       cell.setAttribute('x', c * cellSize + margin[0] + padding);
       cell.setAttribute('y', r * cellSize + margin[1] + padding);
@@ -87,8 +88,20 @@ function onReady() {
   expression.textContent = 'a * b';
   svg.appendChild(expression);
 
+  swapButton = document.createElementNS(svgNamespace, 'text');
+  swapButton.setAttribute('id', 'swapButton');
+  swapButton.setAttribute('x', 0);
+  swapButton.setAttribute('y', 0);
+  swapButton.setAttribute('font-size', cellSize * 0.2);
+  swapButton.setAttribute('text-anchor', 'middle');
+  swapButton.setAttribute('alignment-baseline', 'hanging');
+  swapButton.setAttribute('visibility', 'hidden');
+  swapButton.textContent = '\u21c6';
+  svg.appendChild(swapButton);
+
   guessBox.addEventListener('keyup', onKeyUp);
   resetButton.addEventListener('click', reset);
+  swapButton.addEventListener('click', swap);
 
   reset();
 }
@@ -97,12 +110,12 @@ function reset() {
   gameOverRoot.style.display = 'none';
   order = [];
 
-  for (var i = 0; i < resolution[0] * resolution[1]; ++i) {
+  for (var i = 0; i < resolution * resolution; ++i) {
     labels[i].setAttribute('opacity', 0);
     order.push(i);
   }
 
-  for (var i = resolution[0] * resolution[1] - 1; i >= 1; --i) {
+  for (var i = resolution * resolution - 1; i >= 1; --i) {
     var j = Math.floor(Math.random() * (i + 1));
     var tmp = order[i];
     order[i] = order[j];
@@ -118,10 +131,14 @@ function onKeyUp(event) {
   }
 }
 
+function operandsToIndex(c, r) {
+  return (r - 1) * resolution + (c - 1);
+}
+
 function checkGuess() {
   var guess = parseInt(guessBox.value);
   if (guess == operands[0] * operands[1]) {
-    var i = (operands[1] - 1) * resolution[0] + (operands[0] - 1);
+    var i = operandsToIndex(operands[0], operands[1]);
     labels[i].setAttribute('opacity', 1);
     if (order.length == 0) {
       hidePrompt();
@@ -166,11 +183,21 @@ function shakeGuess() {
   }, 10);
 }
 
+function swap() {
+  // replace index of swapped with index of current
+  var i = operandsToIndex(operands[1], operands[0]);
+  order[order.indexOf(i)] = operandsToIndex(operands[0], operands[1]);
+  var oldOperands = [operands[0], operands[1]];
+  operands = [operands[1], operands[0]]
+  hidePrompt();
+  resize(oldOperands, operands);
+}
+
 function next() {
   var answer = order.pop();
   var oldOperands = [operands[0], operands[1]];
-  operands[0] = 1 + answer % resolution[0];
-  operands[1] = 1 + Math.floor(answer / resolution[0]);
+  operands[0] = 1 + answer % resolution;
+  operands[1] = 1 + Math.floor(answer / resolution);
 
   hidePrompt();
   resize(oldOperands, operands);
@@ -178,6 +205,7 @@ function next() {
 
 function hidePrompt() {
   expression.setAttribute('opacity', 0);
+  swapButton.setAttribute('visibility', 'hidden');
   guessBox.style.display = 'none';
 }
 
@@ -204,9 +232,9 @@ function resize(oldResolution, newResolution) {
 }
 
 function colorCells() {
-  for (var r = 0; r < resolution[1]; ++r) {
-    for (var c = 0; c < resolution[0]; ++c) {
-      var i = r * resolution[0] + c;
+  for (var r = 0; r < resolution; ++r) {
+    for (var c = 0; c < resolution; ++c) {
+      var i = r * resolution + c;
       var color = (r < bounds[1] && c < bounds[0]) ? cellOnColor : cellOffColor;
       cells[i].setAttribute('fill', color);
     }
@@ -225,6 +253,12 @@ function showPrompt() {
   expression.setAttribute('x', p.x);
   expression.setAttribute('y', p.y - 25);
   expression.setAttribute('opacity', 1);
+  swapButton.setAttribute('x', p.x);
+  swapButton.setAttribute('y', p.y + 25);
+  var iSwap = operandsToIndex(operands[1], operands[0]);
+  if (order.includes(iSwap)) {
+    swapButton.setAttribute('visibility', 'visible');
+  }
   guessBox.style.left = x + 'px';
   guessBox.style.top = y + 'px';
   guessBox.value = '';

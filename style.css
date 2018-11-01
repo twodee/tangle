@@ -49,3 +49,8 @@ svg {
   border: none;
   padding: 5px 10px;
 }
+
+#swapButton {
+  cursor: pointer;
+  pointer-events: visible;
+}
