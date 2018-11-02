@@ -1,5 +1,5 @@
 var cellSize = 50;
-var resolution = 2;
+var resolution = 10;
 var svgNamespace = "http://www.w3.org/2000/svg";
 var cells = [];
 var labels = [];
@@ -15,6 +15,7 @@ var margin = [20, 40];
 var expression = null;
 var swapButton = null;
 var gameOverRoot = null;
+var nConsecutiveWrong = 0;
 
 function onReady() {
   var resetButton = document.getElementById('reset');
@@ -135,9 +136,11 @@ function operandsToIndex(c, r) {
   return (r - 1) * resolution + (c - 1);
 }
 
+var integerPattern = /^\d+$/;
+
 function checkGuess() {
   var guess = parseInt(guessBox.value);
-  if (guess == operands[0] * operands[1]) {
+  if (guess == operands[0] * operands[1] && integerPattern.test(guessBox.value)) {
     var i = operandsToIndex(operands[0], operands[1]);
     labels[i].setAttribute('opacity', 1);
     if (order.length == 0) {
@@ -149,6 +152,7 @@ function checkGuess() {
       next();
     }
   } else {
+    ++nConsecutiveWrong;
     shakeGuess();
   }
 }
@@ -168,14 +172,21 @@ function shakeGuess() {
   oldY = parseFloat(oldY.substring(0, oldY.length - 2));
 
   var bounds = guessBox.getBoundingClientRect();
+  guessBox.disabled = true;
 
   var task = setInterval(() => {
     var elapsedMillis = new Date().getTime() - startMillis;
     if (elapsedMillis > targetMillis) {
       clearInterval(task);
-      guessBox.style.left = oldX + 'px';
-      guessBox.value = '';
-      guessBox.focus();
+      guessBox.disabled = false;
+      if (nConsecutiveWrong >= 3) {
+        order.unshift(operandsToIndex(operands[0], operands[1]));
+        next();
+      } else {
+        guessBox.style.left = oldX + 'px';
+        guessBox.value = '';
+        guessBox.focus();
+      }
     } else { 
       var intensity = amplitude * Math.exp(-lambda * elapsedMillis / 1000) * Math.cos(frequency * elapsedMillis / 1000 - Math.PI * 0.5);
       guessBox.style.left = (oldX + intensity) + 'px';
@@ -194,6 +205,7 @@ function swap() {
 }
 
 function next() {
+  nConsecutiveWrong = 0;
   var answer = order.pop();
   var oldOperands = [operands[0], operands[1]];
   operands[0] = 1 + answer % resolution;
