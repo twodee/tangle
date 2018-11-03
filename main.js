@@ -45,6 +45,7 @@ function onReady() {
     label.setAttribute('font-size', fontSize);
     label.setAttribute('text-anchor', 'end');
     label.setAttribute('alignment-baseline', 'central');
+    label.setAttribute('dominant-baseline', 'central');
     label.textContent = r + 1;
     svg.appendChild(label);
   }
@@ -56,6 +57,7 @@ function onReady() {
     label.setAttribute('font-size', fontSize);
     label.setAttribute('text-anchor', 'middle');
     label.setAttribute('alignment-baseline', 'end');
+    label.setAttribute('dominant-baseline', 'end');
     label.textContent = c + 1;
     svg.appendChild(label);
   }
@@ -80,6 +82,7 @@ function onReady() {
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('fill', cellTextColor);
       label.setAttribute('alignment-baseline', 'central');
+      label.setAttribute('dominant-baseline', 'central');
       label.setAttribute('opacity', 0);
       label.textContent = (r + 1) * (c + 1);
       labels.push(label);
@@ -93,6 +96,7 @@ function onReady() {
   expression.setAttribute('font-size', 0.75 * fontSize);
   expression.setAttribute('text-anchor', 'middle');
   expression.setAttribute('alignment-baseline', 'central');
+  expression.setAttribute('dominant-baseline', 'central');
   expression.setAttribute('opacity', 0);
   expression.textContent = 'a * b';
   svg.appendChild(expression);
@@ -104,6 +108,7 @@ function onReady() {
   swapButton.setAttribute('font-size', cellSize * 0.2);
   swapButton.setAttribute('text-anchor', 'middle');
   swapButton.setAttribute('alignment-baseline', 'central');
+  swapButton.setAttribute('dominant-baseline', 'central');
   swapButton.setAttribute('visibility', 'hidden');
   swapButton.textContent = '\u21c6';
   svg.appendChild(swapButton);
