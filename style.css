@@ -3,12 +3,19 @@
 }
 
 #guessBox {
+  padding: 0;
+  margin: 0;
   position: absolute;
   left: 50px;
   top: 200px;
   transform: translate(-50%, -50%);
   display: none;
   text-align: center;
+  border: none;
+  outline: none;
+  font-size: 24pt;
+  background-color: transparent;
+  vertical-align: middle;
 }
 
 svg {

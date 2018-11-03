@@ -3,6 +3,7 @@ var resolution = 10;
 var svgNamespace = "http://www.w3.org/2000/svg";
 var cells = [];
 var labels = [];
+var isAnswered = [];
 var operands = [0, 0];
 var bounds = [0, 0];
 var order = [];
@@ -16,6 +17,9 @@ var expression = null;
 var swapButton = null;
 var gameOverRoot = null;
 var nConsecutiveWrong = 0;
+var padding = 5;
+var isPrompting = false;
+var fontSize;
 
 function onReady() {
   var resetButton = document.getElementById('reset');
@@ -25,17 +29,22 @@ function onReady() {
   guessBox = document.getElementById('guessBox');
 
   cellSize = root.offsetWidth / resolution;
-  svg.setAttribute('viewBox', '0 0 ' + (cellSize * resolution + margin[0]) + ' ' + (cellSize * resolution + margin[1]));
+  fontSize = cellSize * 0.3;
+  margin[0] = cellSize * 0.35;
+  margin[1] = cellSize * 0.35;
+  var radius = cellSize / 13;
+  padding = cellSize / 26;
+  console.log("cellSize:", cellSize);
 
-  guessBox.style.width = (cellSize * 0.4) + 'px';
+  svg.setAttribute('viewBox', '0 0 ' + (cellSize * resolution + margin[0]) + ' ' + (cellSize * resolution + margin[1]));
 
   for (var r = 0; r < resolution; ++r) {
     var label = document.createElementNS(svgNamespace, 'text');
-    label.setAttribute('x', 0);
+    label.setAttribute('x', fontSize);
     label.setAttribute('y', (r + 0.5) * cellSize + margin[1]);
-    label.setAttribute('font-size', cellSize * 0.3);
+    label.setAttribute('font-size', fontSize);
     label.setAttribute('text-anchor', 'end');
-    label.setAttribute('alignment-baseline', 'middle');
+    label.setAttribute('alignment-baseline', 'central');
     label.textContent = r + 1;
     svg.appendChild(label);
   }
@@ -43,15 +52,14 @@ function onReady() {
   for (var c = 0; c < resolution; ++c) {
     var label = document.createElementNS(svgNamespace, 'text');
     label.setAttribute('x', (c + 0.5) * cellSize + margin[0]);
-    label.setAttribute('y', 15);
-    label.setAttribute('font-size', cellSize * 0.3);
+    label.setAttribute('y', fontSize);
+    label.setAttribute('font-size', fontSize);
     label.setAttribute('text-anchor', 'middle');
-    label.setAttribute('alignment-baseline', 'middle');
+    label.setAttribute('alignment-baseline', 'end');
     label.textContent = c + 1;
     svg.appendChild(label);
   }
 
-  var padding = 5;
   for (var r = 0; r < resolution; ++r) {
     for (var c = 0; c < resolution; ++c) {
       var cell = document.createElementNS(svgNamespace, 'rect');
@@ -59,8 +67,8 @@ function onReady() {
       cell.setAttribute('y', r * cellSize + margin[1] + padding);
       cell.setAttribute('width', cellSize - 2 * padding);
       cell.setAttribute('height', cellSize - 2 * padding);
-      cell.setAttribute('rx', 10);
-      cell.setAttribute('ry', 10);
+      cell.setAttribute('rx', radius);
+      cell.setAttribute('ry', radius);
       cell.setAttribute('fill', cellOffColor);
       cells.push(cell);
       svg.appendChild(cell);
@@ -68,10 +76,10 @@ function onReady() {
       var label = document.createElementNS(svgNamespace, 'text');
       label.setAttribute('x', (c + 0.5) * cellSize + margin[0]);
       label.setAttribute('y', (r + 0.5) * cellSize + margin[1]);
-      label.setAttribute('font-size', cellSize * 0.3);
+      label.setAttribute('font-size', fontSize);
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('fill', cellTextColor);
-      label.setAttribute('alignment-baseline', 'middle');
+      label.setAttribute('alignment-baseline', 'central');
       label.setAttribute('opacity', 0);
       label.textContent = (r + 1) * (c + 1);
       labels.push(label);
@@ -82,9 +90,9 @@ function onReady() {
   expression = document.createElementNS(svgNamespace, 'text');
   expression.setAttribute('x', 0);
   expression.setAttribute('y', 0);
-  expression.setAttribute('font-size', cellSize * 0.2);
+  expression.setAttribute('font-size', 0.75 * fontSize);
   expression.setAttribute('text-anchor', 'middle');
-  expression.setAttribute('alignment-baseline', 'baseline');
+  expression.setAttribute('alignment-baseline', 'central');
   expression.setAttribute('opacity', 0);
   expression.textContent = 'a * b';
   svg.appendChild(expression);
@@ -95,7 +103,7 @@ function onReady() {
   swapButton.setAttribute('y', 0);
   swapButton.setAttribute('font-size', cellSize * 0.2);
   swapButton.setAttribute('text-anchor', 'middle');
-  swapButton.setAttribute('alignment-baseline', 'hanging');
+  swapButton.setAttribute('alignment-baseline', 'central');
   swapButton.setAttribute('visibility', 'hidden');
   swapButton.textContent = '\u21c6';
   svg.appendChild(swapButton);
@@ -104,7 +112,37 @@ function onReady() {
   resetButton.addEventListener('click', reset);
   swapButton.addEventListener('click', swap);
 
+  resize();
   reset();
+
+  window.addEventListener('resize', resize);
+  guessBox.addEventListener('blur', function() {
+    guessBox.focus();
+  });
+}
+
+function resize() {
+  var bounds = cells[0].getBoundingClientRect();
+  guessBox.style.width = bounds.width + 'px';
+  guessBox.style['font-size'] = bounds.height / 3 + 'px';
+
+  // console.log("bounds.width:", bounds.width);
+  // var foo = root.offsetWidth / resolution;
+
+  // var p = svg.createSVGPoint();
+  // p.x = 0;
+  // p.y = 0;
+  // var a = p.matrixTransform(svg.getScreenCTM());
+  // console.log("a:", a);
+
+  // p.y = fontSize;
+  // var b = p.matrixTransform(svg.getScreenCTM());
+  // diff = b.y - a.y;
+  // guessBox.style['font-size'] = '18pt';
+
+  if (isPrompting) {
+    showPrompt(); 
+  }
 }
 
 function reset() {
@@ -113,6 +151,7 @@ function reset() {
 
   for (var i = 0; i < resolution * resolution; ++i) {
     labels[i].setAttribute('opacity', 0);
+    isAnswered[i] = false;
     order.push(i);
   }
 
@@ -127,7 +166,7 @@ function reset() {
 }
 
 function onKeyUp(event) {
-  if (event.which == 13) {
+  if (event.which == 13 && guessBox.value != '') {
     checkGuess();
   }
 }
@@ -139,10 +178,17 @@ function operandsToIndex(c, r) {
 var integerPattern = /^\d+$/;
 
 function checkGuess() {
-  var guess = parseInt(guessBox.value);
-  if (guess == operands[0] * operands[1] && integerPattern.test(guessBox.value)) {
+  var guess;
+  if (integerPattern.test(guessBox.value)) {
+    guess = parseInt(guessBox.value);
+  } else {
+    guess = 0;
+  }
+
+  if (guess == operands[0] * operands[1]) {
     var i = operandsToIndex(operands[0], operands[1]);
     labels[i].setAttribute('opacity', 1);
+    isAnswered[i] = true;
     if (order.length == 0) {
       hidePrompt();
       bounds = [0, 0];
@@ -153,13 +199,14 @@ function checkGuess() {
     }
   } else {
     ++nConsecutiveWrong;
-    shakeGuess();
+    shakeGuess(guess);
   }
 }
 
-function shakeGuess() {
+function shakeGuess(guess) {
+  var answer = operands[0] * operands[1];
   var elapsedTime = 0;
-  var amplitude = 20;
+  var amplitude = root.offsetWidth / resolution / 6;
   var lambda = 0.95;
   var frequency = 30;
   var startMillis = new Date().getTime();
@@ -173,6 +220,20 @@ function shakeGuess() {
 
   var bounds = guessBox.getBoundingClientRect();
   guessBox.disabled = true;
+
+  if (guess > 0 && nConsecutiveWrong < 3) {
+    synchronizeCells();
+    var factorPairs = [];
+    for (var i = 1; i <= resolution; ++i) {
+      if (guess % i == 0 && guess / i <= resolution) {
+        var pair = [i, guess / i];
+        factorPairs.push(pair);
+        var iPair = operandsToIndex(pair[0], pair[1]);
+        cells[iPair].setAttribute('fill', '#E265FF');
+        labels[iPair].setAttribute('opacity', 1);
+      }
+    }
+  }
 
   var task = setInterval(() => {
     var elapsedMillis = new Date().getTime() - startMillis;
@@ -201,7 +262,7 @@ function swap() {
   var oldOperands = [operands[0], operands[1]];
   operands = [operands[1], operands[0]]
   hidePrompt();
-  resize(oldOperands, operands);
+  shape(oldOperands, operands);
 }
 
 function next() {
@@ -212,16 +273,17 @@ function next() {
   operands[1] = 1 + Math.floor(answer / resolution);
 
   hidePrompt();
-  resize(oldOperands, operands);
+  shape(oldOperands, operands);
 }
 
 function hidePrompt() {
+  isPrompting = false;
   expression.setAttribute('opacity', 0);
   swapButton.setAttribute('visibility', 'hidden');
   guessBox.style.display = 'none';
 }
 
-function resize(oldResolution, newResolution) {
+function shape(oldResolution, newResolution) {
   var startMillis = new Date().getTime();
   var diffX = newResolution[0] - oldResolution[0];
   var diffY = newResolution[1] - oldResolution[1];
@@ -239,21 +301,30 @@ function resize(oldResolution, newResolution) {
       bounds[0] = lerp(elapsedMillis, targetMillis, oldResolution[0], newResolution[0]);
       bounds[1] = lerp(elapsedMillis, targetMillis, oldResolution[1], newResolution[1]);
     }
-    colorCells();
+    synchronizeCells();
   }, 10);
 }
 
-function colorCells() {
+function synchronizeCells() {
   for (var r = 0; r < resolution; ++r) {
     for (var c = 0; c < resolution; ++c) {
       var i = r * resolution + c;
-      var color = (r < bounds[1] && c < bounds[0]) ? cellOnColor : cellOffColor;
-      cells[i].setAttribute('fill', color);
+      if (r < bounds[1] && c < bounds[0]) {
+        cells[i].setAttribute('fill', cellOnColor);
+      } else {
+        cells[i].setAttribute('fill', cellOffColor);
+      }
+      if (isAnswered[i]) {
+        labels[i].setAttribute('opacity', 1);
+      } else {
+        labels[i].setAttribute('opacity', 0);
+      }
     }
   }
 }
 
 function showPrompt() {
+  isPrompting = true;
   var p = svg.createSVGPoint();
   p.x = (operands[0] - 0.5) * cellSize + margin[0];
   p.y = (operands[1] - 0.5) * cellSize + margin[1];
@@ -263,10 +334,10 @@ function showPrompt() {
   var y = pp.y - bounds.top;
   expression.textContent = operands[0] + ' \u00D7 ' + operands[1];
   expression.setAttribute('x', p.x);
-  expression.setAttribute('y', p.y - 25);
+  expression.setAttribute('y', p.y - (cellSize - 2 * padding) / 3);
   expression.setAttribute('opacity', 1);
   swapButton.setAttribute('x', p.x);
-  swapButton.setAttribute('y', p.y + 25);
+  swapButton.setAttribute('y', p.y + (cellSize - 2 * padding) / 3);
   var iSwap = operandsToIndex(operands[1], operands[0]);
   if (order.includes(iSwap)) {
     swapButton.setAttribute('visibility', 'visible');
@@ -305,4 +376,4 @@ function easeQuadInOut(currentMillis, targetMillis, oldValue, newValue) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', onReady);
+window.addEventListener('load', onReady);
