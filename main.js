@@ -192,7 +192,7 @@ function checkGuess() {
     if (order.length == 0) {
       hidePrompt();
       bounds = [0, 0];
-      colorCells();
+      synchronizeCells();
       gameOverRoot.style.display = 'block';
     } else {
       next();
